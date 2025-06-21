@@ -1,0 +1,31 @@
+# Ignore system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VS Code settings
+.vscode/
+
+# XAMPP or PHP logs
+*.log
+*.tmp
+
+# Sensitive data
+config.php
+otp_display.txt
+
+# Composer files (if ever used)
+vendor/
+composer.lock
+
+# DB backups
+*.sql
+*.bak
+
+# Node files (in case you expand with JS tools)
+node_modules/
+dist/
+
+# Ignore all hidden files except .gitignore
+.*
+!.gitignore
