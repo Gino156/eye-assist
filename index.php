@@ -1,7 +1,7 @@
 <?php
 require 'config.php';
+require 'includes/functions.php';
 session_start();
-
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -17,26 +17,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        // Check if locked
         if ($user['login_attempts'] >= 3 && strtotime($user['last_attempt']) > strtotime("-5 minutes")) {
-            $message = "Account locked. Try again later.";
+            $message = "Account locked. Try again in a few minutes.";
         } elseif (password_verify($password, $user['password'])) {
-            // Reset attempts
             $conn->query("UPDATE admins SET login_attempts = 0 WHERE id = " . $user['id']);
-
-            // Generate OTP
-            require 'includes/functions.php';
             $otp = generateOTP();
             $_SESSION['otp'] = $otp;
             $_SESSION['temp_admin'] = $user['id'];
-
-            // Simulate OTP display (in real use, send via email/SMS)
             file_put_contents("otp_display.txt", "OTP: " . $otp);
-
             header("Location: verify.php");
             exit;
         } else {
-            // Increase attempt
             $conn->query("UPDATE admins SET login_attempts = login_attempts + 1, last_attempt = NOW() WHERE id = " . $user['id']);
             $message = "Incorrect password.";
         }
@@ -47,20 +38,102 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Login - Eye Assist</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye Assist - Admin Login</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 1rem;
+            color: #e63946;
+            font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            input[type="text"],
+            input[type="password"],
+            button {
+                font-size: 0.95rem;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <h2>Admin Login</h2>
-    <form method="post">
-        <input type="text" name="username" placeholder="Username" required><br>
-        <input type="password" name="password" placeholder="Password" required><br>
-        <button type="submit">Login</button>
-    </form>
-    <p><?= $message ?></p>
+    <div class="container">
+        <h2>Admin Login</h2>
+        <form method="post">
+            <input type="text" name="username" placeholder="Enter Username" required>
+            <input type="password" name="password" placeholder="Enter Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <?php if (!empty($message)): ?>
+            <div class="message"><?= htmlspecialchars($message) ?></div>
+        <?php endif; ?>
+    </div>
 </body>
 
 </html>
