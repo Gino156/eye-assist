@@ -5,7 +5,7 @@ require '../includes/functions.php';
 // Check for token (e.g., from header or GET param)
 $token = $_GET['token'] ?? '';
 
-$validTokens = ['YOUR_SECURE_API_TOKEN']; // replace with your token
+$validTokens = ['70f7edc6e3b58cce8635fe1f67ae7235d2512bb57691d7fcaefe9d1299aaf9ec']; // replace with your token
 
 if (!in_array($token, $validTokens)) {
     http_response_code(401);

@@ -1,11 +1,33 @@
 <?php
+// ✅ IP Whitelist setup
+$whitelist = [
+    '127.0.0.1', // Localhost
+    '::1',       // IPv6 localhost
+    '131.226.107.207 ',
+];
+
+// Load from .env.php (optional)
+if (file_exists(__DIR__ . '/.env.php')) {
+    require __DIR__ . '/.env.php';
+    if (isset($WHITELIST_IPS) && is_array($WHITELIST_IPS)) {
+        $whitelist = array_merge($whitelist, $WHITELIST_IPS);
+    }
+}
+
+$client_ip = $_SERVER['REMOTE_ADDR'];
+if (!in_array($client_ip, $whitelist)) {
+    http_response_code(403);
+    exit("❌ Access denied from IP: $client_ip");
+}
+
 require 'config.php';
 require 'includes/functions.php';
 session_start();
+
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $username = $_POST['username'];
+    $username = trim($_POST['username']);
     $password = $_POST['password'];
 
     $sql = "SELECT * FROM admins WHERE username = ?";
@@ -18,21 +40,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $user = $result->fetch_assoc();
 
         if ($user['login_attempts'] >= 3 && strtotime($user['last_attempt']) > strtotime("-5 minutes")) {
-            $message = "Account locked. Try again in a few minutes.";
+            $message = "⛔ Account locked. Try again after 5 minutes.";
         } elseif (password_verify($password, $user['password'])) {
             $conn->query("UPDATE admins SET login_attempts = 0 WHERE id = " . $user['id']);
+
             $otp = generateOTP();
             $_SESSION['otp'] = $otp;
             $_SESSION['temp_admin'] = $user['id'];
+
+            // Save OTP for demo purpose (remove this in production)
             file_put_contents("otp_display.txt", "OTP: " . $otp);
+
             header("Location: verify.php");
             exit;
         } else {
             $conn->query("UPDATE admins SET login_attempts = login_attempts + 1, last_attempt = NOW() WHERE id = " . $user['id']);
-            $message = "Incorrect password.";
+            $message = "❌ Incorrect password.";
         }
     } else {
-        $message = "User not found.";
+        $message = "❌ User not found.";
     }
 }
 ?>
@@ -42,8 +68,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eye Assist - Admin Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
             box-sizing: border-box;
