@@ -1,18 +1,25 @@
-<?php require 'includes/session.php'; ?>
 <?php
+session_start();
 require 'config.php';
 require 'includes/functions.php';
+
+// Restrict access to only logged-in admins
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true || !in_array($_SESSION['role'], ['admin', 'superadmin'])) {
+    header("Location: login.php");
+    exit;
+}
 
 $message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $log = $_POST['log_data'];
+    $log = trim($_POST['log_data']);
     $encrypted = encryptData($log);
-    $adminId = $_SESSION['admin_id'];
+    $adminId = $_SESSION['user_id'];
 
     $stmt = $conn->prepare("INSERT INTO navigation_logs (admin_id, log_data) VALUES (?, ?)");
     $stmt->bind_param("is", $adminId, $encrypted);
     $stmt->execute();
+
     $message = "✅ Log saved successfully!";
 }
 ?>
@@ -23,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Eye Assist</title>
+    <title>Dashboard - Eye Assist Admin</title>
     <style>
         * {
             box-sizing: border-box;
@@ -97,6 +104,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-top: 1.5rem;
             display: flex;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         .actions a {
@@ -121,7 +130,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             .actions {
                 flex-direction: column;
-                gap: 1rem;
                 align-items: center;
             }
         }
@@ -130,7 +138,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <body>
     <div class="container">
-        <h1>Welcome Admin!</h1>
+        <h1>Welcome, Admin!</h1>
 
         <?php if (!empty($message)): ?>
             <div class="message"><?= htmlspecialchars($message) ?></div>
@@ -144,6 +152,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         <div class="actions">
             <a href="logs.php">🔍 View All Logs</a>
+            <a href="devices.php">🛠 Manage Devices</a>
             <a href="logout.php">🚪 Logout</a>
         </div>
     </div>

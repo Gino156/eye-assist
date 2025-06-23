@@ -1,12 +1,10 @@
 <?php
-// ✅ IP Whitelist setup
 $whitelist = [
     '127.0.0.1', // Localhost
-    '::1',       // IPv6 localhost
-    '131.226.107.207 ',
+    '::1',
+    '131.226.107.207',
 ];
 
-// Load from .env.php (optional)
 if (file_exists(__DIR__ . '/.env.php')) {
     require __DIR__ . '/.env.php';
     if (isset($WHITELIST_IPS) && is_array($WHITELIST_IPS)) {
@@ -26,11 +24,11 @@ session_start();
 
 $message = "";
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $username = trim($_POST['username']);
     $password = $_POST['password'];
 
-    $sql = "SELECT * FROM admins WHERE username = ?";
+    $sql = "SELECT * FROM users WHERE username = ?";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $username);
     $stmt->execute();
@@ -39,22 +37,30 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if ($result->num_rows === 1) {
         $user = $result->fetch_assoc();
 
-        if ($user['login_attempts'] >= 3 && strtotime($user['last_attempt']) > strtotime("-5 minutes")) {
+        // Lockout check
+        if (!empty($user['login_attempts']) && $user['login_attempts'] >= 3 && strtotime($user['last_attempt']) > strtotime("-5 minutes")) {
             $message = "⛔ Account locked. Try again after 5 minutes.";
         } elseif (password_verify($password, $user['password'])) {
-            $conn->query("UPDATE admins SET login_attempts = 0 WHERE id = " . $user['id']);
+            // Reset login attempts
+            $stmt = $conn->prepare("UPDATE users SET login_attempts = 0 WHERE id = ?");
+            $stmt->bind_param("i", $user['id']);
+            $stmt->execute();
 
-            $otp = generateOTP();
+            // Generate OTP and set session
+            $otp = generateOTP(); // Function must return a code
             $_SESSION['otp'] = $otp;
-            $_SESSION['temp_admin'] = $user['id'];
+            $_SESSION['temp_user'] = $user['id'];
 
-            // Save OTP for demo purpose (remove this in production)
+            // For development only (REMOVE in production!)
             file_put_contents("otp_display.txt", "OTP: " . $otp);
 
             header("Location: verify.php");
             exit;
         } else {
-            $conn->query("UPDATE admins SET login_attempts = login_attempts + 1, last_attempt = NOW() WHERE id = " . $user['id']);
+            // Wrong password
+            $stmt = $conn->prepare("UPDATE users SET login_attempts = login_attempts + 1, last_attempt = NOW() WHERE id = ?");
+            $stmt->bind_param("i", $user['id']);
+            $stmt->execute();
             $message = "❌ Incorrect password.";
         }
     } else {
@@ -68,7 +74,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <head>
     <meta charset="UTF-8">
-    <title>Eye Assist - Admin Login</title>
+    <title>Eye Assist - Login</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * {
@@ -78,7 +84,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
             background: linear-gradient(to right, #eef2f3, #8e9eab);
             height: 100vh;
             display: flex;
@@ -120,7 +126,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             border-radius: 8px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.3s ease;
         }
 
         button:hover {
@@ -133,24 +138,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             color: #e63946;
             font-weight: 500;
         }
-
-        @media (max-width: 480px) {
-            .container {
-                padding: 1.5rem;
-            }
-
-            input[type="text"],
-            input[type="password"],
-            button {
-                font-size: 0.95rem;
-            }
-        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <h2>Admin Login</h2>
+        <h2>Login</h2>
         <form method="post">
             <input type="text" name="username" placeholder="Enter Username" required>
             <input type="password" name="password" placeholder="Enter Password" required>

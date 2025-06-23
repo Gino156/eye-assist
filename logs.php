@@ -2,6 +2,7 @@
 require 'includes/session.php';
 require 'config.php';
 require 'includes/functions.php';
+$config = require 'env.php'; // ✅ Load API_TOKEN
 
 $limit = 10;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -18,7 +19,11 @@ $totalResult = $conn->query("SELECT COUNT(*) as total FROM navigation_logs $wher
 $totalRows = $totalResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
-$result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigation_logs JOIN admins ON navigation_logs.admin_id = admins.id $whereClause ORDER BY navigation_logs.created_at DESC LIMIT $start, $limit");
+$result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigation_logs 
+    JOIN admins ON navigation_logs.admin_id = admins.id 
+    $whereClause 
+    ORDER BY navigation_logs.created_at DESC 
+    LIMIT $start, $limit");
 ?>
 
 <!DOCTYPE html>
@@ -250,6 +255,8 @@ $result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigatio
     </div>
 
     <script>
+        const apiToken = "<?= $config['API_TOKEN'] ?>"; // ✅ Use token from env.php
+
         function showDecrypted(id) {
             fetch('view_api.php?id=' + id)
                 .then(res => res.text())
