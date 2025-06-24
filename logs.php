@@ -15,12 +15,14 @@ if (!empty($search)) {
     $whereClause = "WHERE log_data LIKE '%$escapedSearch%'";
 }
 
+// ✅ Make sure to use `users` instead of `admins`
 $totalResult = $conn->query("SELECT COUNT(*) as total FROM navigation_logs $whereClause");
 $totalRows = $totalResult->fetch_assoc()['total'];
 $totalPages = ceil($totalRows / $limit);
 
-$result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigation_logs 
-    JOIN admins ON navigation_logs.admin_id = admins.id 
+$result = $conn->query("SELECT navigation_logs.*, users.username 
+    FROM navigation_logs 
+    JOIN users ON navigation_logs.admin_id = users.id 
     $whereClause 
     ORDER BY navigation_logs.created_at DESC 
     LIMIT $start, $limit");
@@ -213,7 +215,7 @@ $result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigatio
 <body>
     <div class="container">
         <h2>📋 Navigation Logs</h2>
-        <a class="back-link" href="dashboard.php">⬅ Back to Dashboard</a>
+        <a class="back-link" href="dashboard_user.php">⬅ Back to Dashboard</a>
 
         <div class="top-actions">
             <form method="get">
@@ -229,7 +231,7 @@ $result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigatio
         <?php while ($row = $result->fetch_assoc()): ?>
             <div class="log-entry">
                 <strong>🕒 <?= htmlspecialchars($row['created_at']) ?></strong>
-                <strong>👤 Admin:</strong> <?= htmlspecialchars($row['username']) ?><br>
+                <strong>👤 User:</strong> <?= htmlspecialchars($row['username']) ?><br>
                 <strong>🔐 Encrypted:</strong> <?= htmlspecialchars($row['log_data']) ?>
                 <div class="actions">
                     <button onclick="showDecrypted('<?= $row['id'] ?>')">👁 View</button>
@@ -255,7 +257,7 @@ $result = $conn->query("SELECT navigation_logs.*, admins.username FROM navigatio
     </div>
 
     <script>
-        const apiToken = "<?= $config['API_TOKEN'] ?>"; // ✅ Use token from env.php
+        const apiToken = "<?= $config['API_TOKEN'] ?>";
 
         function showDecrypted(id) {
             fetch('view_api.php?id=' + id)
